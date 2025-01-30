@@ -60,6 +60,21 @@ pipeline {
         }
     
     }
+    stage('Destroy Terraform') {
+        steps {
+            input message: "Approve Terraform Destroy?", ok: "Destroy"
+            withCredentials([[
+                $class: 'AmazonWebServicesCredentialsBinding',
+                credentialsId: 'jenkins4shep'
+            ]]) {
+                sh '''
+                export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                terraform destroy --auto-approve
+                '''
+            }
+        }
+    }
     post {
         success {
             echo 'Terraform deployment completed successfully!'
