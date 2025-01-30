@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    parameters {
+        choice(name: 'TERRAFORM_ACTION', choices: ['plan', 'apply', 'destroy'], description: 'Choose Terraform action')
+    }
     environment {
         AWS_REGION = 'us-east-2' 
     }
@@ -24,47 +27,48 @@ pipeline {
         }
         stage('Initialize Terraform') {
             steps {
-                sh '''
-                terraform init
-                '''
+                sh 'terraform init'
             }
         }
-        stage('Plan Terraform') {
+        stage('Run Terraform') {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'jenkins4shep'
                 ]]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform plan -out=tfplan
-                    '''
-                }
-            }
-        }
-        stage('Apply Terraform') {
-            steps {
-                input message: "Approve Terraform Apply?", ok: "Deploy"
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'jenkins4shep'
-                ]]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform apply -auto-approve tfplan
-                    '''
+                    script {
+                        if (params.TERRAFORM_ACTION == 'plan') {
+                            sh '''
+                            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                            terraform plan -out=tfplan
+                            '''
+                        } else if (params.TERRAFORM_ACTION == 'apply') {
+                            input message: "Approve Terraform Apply?", ok: "Deploy"
+                            sh '''
+                            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                            terraform apply -auto-approve tfplan
+                            '''
+                        } else if (params.TERRAFORM_ACTION == 'destroy') {
+                            input message: "Are you sure you want to destroy all resources?", ok: "Destroy"
+                            sh '''
+                            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                            terraform destroy -auto-approve
+                            '''
+                        }
+                    }
                 }
             }
         }
     }
     post {
         success {
-            echo 'Terraform deployment completed successfully!'
+            echo 'Terraform process completed successfully!'
         }
         failure {
-            echo 'Terraform deployment failed!'
+            echo 'Terraform process failed!'
         }
     }
 }
