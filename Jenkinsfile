@@ -62,7 +62,7 @@ pipeline {
                 }
             }
         }
-    }
+    
    
         stage ("Docker Pull Dastardly from Burp Suite container image") {
             steps {
@@ -80,7 +80,7 @@ pipeline {
                 '''
             }
         }
-    
+    }
     post {
         always {
             junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
