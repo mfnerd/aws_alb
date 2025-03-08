@@ -11,7 +11,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'jenkins4shep' 
+                    credentialsId: 'jenkinses' 
                 ]]) {
                     sh '''
                     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
@@ -63,7 +63,28 @@ pipeline {
             }
         }
     }
+   
+        stage ("Docker Pull Dastardly from Burp Suite container image") {
+            steps {
+                sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
+            }
+        }
+        stage ("Docker run Dastardly from Burp Suite Scan") {
+            steps {
+                cleanWs()
+                sh '''
+                    docker run --user $(id -u) -v ${WORKSPACE}:${WORKSPACE}:rw \
+                    -e BURP_START_URL=https://ginandjuice.shop/ \
+                    -e BURP_REPORT_FILE_PATH=${WORKSPACE}/dastardly-report.xml \
+                    public.ecr.aws/portswigger/dastardly:latest
+                '''
+            }
+        }
+    
     post {
+        always {
+            junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
+        }
         success {
             echo 'Terraform process completed successfully!'
         }
@@ -71,4 +92,4 @@ pipeline {
             echo 'Terraform process failed!'
         }
     }
-}
+}    
