@@ -34,7 +34,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'jenkins4shep'
+                    credentialsId: 'jenkinses'
                 ]]) {
                     script {
                         if (params.TERRAFORM_ACTION == 'plan') {
